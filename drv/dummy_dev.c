@@ -19,6 +19,9 @@
 static lang_t langtype;
 static char *inbuffer = NULL;
 static char *outbuffer = NULL;
+static char *class_name = "my_class";
+static char *device_name = "my_dev";
+static char *module_name = "mydev";
 
 /*
  * the open routine of 'dummy_dev'
@@ -147,9 +150,9 @@ static int __init my_init(void)
 	/* register the 'dummy_dev' char device */
 	if (mydev_major) {
 		devno = MKDEV(mydev_major, mydev_minor);
-		ret = register_chrdev_region(devno, 1, "mydev");
+		ret = register_chrdev_region(devno, 1, module_name);
 	} else {
-		ret = alloc_chrdev_region(&devno, 0, 1, "mydev");
+		ret = alloc_chrdev_region(&devno, 0, 1, module_name);
 		mydev_major = MAJOR(devno);
 	}
 	if (ret < 0)
@@ -168,14 +171,14 @@ static int __init my_init(void)
 	if (ret != 0)
 		goto fail_cdev_add;
 
-	my_devp->class = class_create(THIS_MODULE, "my_class");
+	my_devp->class = class_create(THIS_MODULE, class_name);
 	if (IS_ERR(my_devp->class)) {
 		ret = PTR_ERR(my_devp->class);
 		goto fail_create_class;
 	}
 
 	my_devp->dev = device_create(my_devp->class, NULL,
-			devno, NULL, "my_dev");
+			devno, NULL, device_name);
 	if (IS_ERR(my_devp->dev)) {
 		ret = PTR_ERR(my_devp->dev);
 		goto fail_create_device;
