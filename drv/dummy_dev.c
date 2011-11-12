@@ -12,6 +12,8 @@
 #include <linux/slab.h>
 #include "dummy_dev.h"
 
+static lang_t langtype;
+
 /*
  * the open routine of 'dummy_dev'
  */
@@ -51,7 +53,28 @@ static ssize_t dummy_read(struct file *filp, char *bp, size_t count, loff_t *ppo
 static int dummy_ioctl(struct inode *inode, struct file *filep,
             unsigned int cmd, unsigned long arg)
 {
-	return 0;
+	int err = 0;
+
+	switch (cmd) {
+	case DUMMY_IOCTL_RESETLANG:
+		printk(KERN_INFO"DUMMY_IOCTL_RESETLANG\n");
+		langtype = english;
+	case DUMMY_IOCTL_GETLANG:
+		printk(KERN_INFO"DUMMY_IOCTL_GETLANG\n");
+		err = copy_to_user((int *)arg, &langtype, sizeof(int));
+		break;
+	case DUMMY_IOCTL_SETLANG:
+		printk(KERN_INFO"DUMMY_IOCTL_SETLANG\n");
+		err = copy_from_user(&langtype, (int *)arg, sizeof(int));
+		break;
+	default:
+		printk(KERN_INFO"No such cmd.\n");
+		err = ENOTSUPP;
+		break;
+	}
+	printk(KERN_INFO"dummy_ioctl\n");
+
+	return err;
 }
 
 /*
