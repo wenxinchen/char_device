@@ -10,6 +10,7 @@
 #include <asm/unistd.h>
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/semaphore.h>
 #include "dummy_dev.h"
 
 #define IN_BUF_LEN	20
@@ -41,11 +42,18 @@ static int dummy_release(struct inode *inode, struct file *file)
  */
 static ssize_t dummy_write(struct file *filp, const char *user_buf, size_t len, loff_t *off)
 {
+	if (down_interruptible(&my_devp->sem))
+		return -ERESTARTSYS;
+
 	if (len > IN_BUF_LEN)
 		len = IN_BUF_LEN;
 
-	if(copy_from_user(inbuffer, user_buf, len))
+	if(copy_from_user(inbuffer, user_buf, len)) {
+		up(&my_devp->sem);
 		return -EFAULT;
+	}
+	
+	up(&my_devp->sem);
 
 	printk(KERN_INFO"%s:inbuffer=%s\n", __func__, inbuffer);
 
@@ -59,6 +67,9 @@ static ssize_t dummy_read(struct file *filp, char *user_buf, size_t len, loff_t 
 {
 	int length = 0;
 
+	if (down_interruptible(&my_devp->sem))
+		return -ERESTARTSYS;
+	
 	switch (langtype) {
 	case english:
 		length = sprintf(outbuffer, "english: %s.", inbuffer);
@@ -73,8 +84,12 @@ static ssize_t dummy_read(struct file *filp, char *user_buf, size_t len, loff_t 
 		break;
 	}
 
-	if(copy_to_user(user_buf, outbuffer, length))
+	if(copy_to_user(user_buf, outbuffer, length)) {
+		up(&my_devp->sem);
 		return -EFAULT;
+	}
+
+	up(&my_devp->sem);
 
 	printk(KERN_INFO"%s:outbuffer=%s\n", __func__, outbuffer);
 	
@@ -177,6 +192,8 @@ static int __init my_init(void)
 		ret = -ENOMEM;
 		goto fail_malloc_outbuffer;
 	}
+
+	init_MUTEX(&my_devp->sem);
 
 	return 0;
 
