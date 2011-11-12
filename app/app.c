@@ -2,6 +2,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include "../drv/dummy_dev.h"
 
@@ -9,6 +10,8 @@ int main(int argc, char **argv)
 {
 	int fd;
 	lang_t langtype = english;
+	char *myname = "chenwenxin";
+	char outbuf[512];
 
 	if (argc == 1) {
 		printf("Usage: %s langtype(english/chinese/pinyin)\n", argv[0]);
@@ -32,20 +35,27 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
+	write(fd, myname, strlen(myname)+1);
 	ioctl(fd, DUMMY_IOCTL_SETLANG, &langtype);
 	ioctl(fd, DUMMY_IOCTL_GETLANG, &langtype);
 	printf("langtype=%s\n",
 		(langtype==pinyin)?"pinpin":
 		((langtype==english)?"english":
 		((langtype==chinese)?"chinese":"errtype")));
+	memset(outbuf, 0, 512);
+	read(fd, outbuf, 512);
+	printf("%s\n", outbuf);
 
-	printf("Reset:\n");
+	printf("********** Reset **********\n");
 	ioctl(fd, DUMMY_IOCTL_RESETLANG, &langtype);
 	ioctl(fd, DUMMY_IOCTL_GETLANG, &langtype);
 	printf("langtype=%s\n",
 		(langtype==pinyin)?"pinpin":
 		((langtype==english)?"english":
 		((langtype==chinese)?"chinese":"errtype")));
+	memset(outbuf, 0, 512);
+	read(fd, outbuf, 512);
+	printf("%s\n", outbuf);
 
 	close(fd);
 

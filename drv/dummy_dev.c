@@ -12,7 +12,12 @@
 #include <linux/slab.h>
 #include "dummy_dev.h"
 
+#define IN_BUF_LEN	20
+#define OUT_BUF_LEN	50
+
 static lang_t langtype;
+static char *inbuffer = NULL;
+static char *outbuffer = NULL;
 
 /*
  * the open routine of 'dummy_dev'
@@ -34,16 +39,45 @@ static int dummy_release(struct inode *inode, struct file *file)
 /**
  * the write routine of 'dummy_dev'
  */
-static ssize_t dummy_write(struct file *filp, const char *bp, size_t count, loff_t *ppos)
+static ssize_t dummy_write(struct file *filp, const char *user_buf, size_t len, loff_t *off)
 {
+	if (len > IN_BUF_LEN)
+		len = IN_BUF_LEN;
+
+	if(copy_from_user(inbuffer, user_buf, len))
+		return -EFAULT;
+
+	printk(KERN_INFO"%s:inbuffer=%s\n", __func__, inbuffer);
+
 	return 0;
 }
 
 /*
  * the read routine of 'dummy_dev'
  */
-static ssize_t dummy_read(struct file *filp, char *bp, size_t count, loff_t *ppos)
+static ssize_t dummy_read(struct file *filp, char *user_buf, size_t len, loff_t *off)
 {
+	int length = 0;
+
+	switch (langtype) {
+	case english:
+		length = sprintf(outbuffer, "english: %s.", inbuffer);
+		break;
+	case chinese:
+		length = sprintf(outbuffer, "chinese: %s.", inbuffer);
+		break;
+	case pinyin:
+		length = sprintf(outbuffer, "pinyin: %s.", inbuffer);
+		break;
+	default:
+		break;
+	}
+
+	if(copy_to_user(user_buf, outbuffer, length))
+		return -EFAULT;
+
+	printk(KERN_INFO"%s:outbuffer=%s\n", __func__, outbuffer);
+	
 	return 0;
 }
 
@@ -131,9 +165,25 @@ static int __init my_init(void)
 		ret = PTR_ERR(my_devp->dev);
 		goto fail_create_device;
 	}
-	
+
+	langtype = english;
+	inbuffer = (char *)kmalloc(IN_BUF_LEN, GFP_KERNEL);
+	if (!inbuffer) {
+		ret = -ENOMEM;
+		goto fail_malloc_inbuffer;
+	}
+	outbuffer = (char *)kmalloc(OUT_BUF_LEN, GFP_KERNEL);
+	if (!outbuffer) {
+		ret = -ENOMEM;
+		goto fail_malloc_outbuffer;
+	}
+
 	return 0;
 
+fail_malloc_outbuffer:
+	kfree(inbuffer);
+fail_malloc_inbuffer:
+	device_destroy(my_devp->class, devno);
 fail_create_device:
 	class_destroy(my_devp->class);
 fail_create_class:
@@ -151,7 +201,9 @@ static void __exit my_exit(void)
 	dev_t devno = MKDEV(mydev_major, mydev_minor);
 
 	printk("my_exit\n");
-	
+
+	kfree(outbuffer);
+	kfree(inbuffer);	
 	device_destroy(my_devp->class, devno);
 	class_destroy(my_devp->class);
 	cdev_del(my_devp->cdev);
