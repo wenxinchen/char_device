@@ -10,11 +10,7 @@
 #include <asm/unistd.h>
 #include <linux/device.h>
 #include <linux/slab.h>
-
-#define THIS_DESCRIPTION "This is a simple char device"
-
-int mydev_major = 0;
-int mydev_minor =0;
+#include "dummy_dev.h"
 
 /*
  * the open routine of 'dummy_dev'
@@ -69,16 +65,6 @@ static struct file_operations dummy_dev_ops = {
 	.ioctl = dummy_ioctl,
 	.release = dummy_release,
 };
-
-/*
- * struct cdev of 'dummy_dev'
- */
-struct my_dev {
-	struct cdev *cdev;
-	struct class *class;
-	struct device *dev;
-};
-struct my_dev *my_devp;
 
 static int __init my_init(void)
 {
