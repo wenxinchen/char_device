@@ -28,7 +28,12 @@ static char *module_name = "mydev";
  */
 static int dummy_open(struct inode *inode, struct file *file)
 {
+	int minor;
+
+	minor = MINOR(file->f_dentry->d_inode->i_rdev);
 //	dump_stack();
+	if (minor == mydev_minor)
+		printk(KERN_INFO"minor = %d\n", minor);
 	return 0;
 }
 

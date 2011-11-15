@@ -3,8 +3,8 @@
 
 #define THIS_DESCRIPTION "This is a simple char device"
 
-int mydev_major = 0;
-int mydev_minor =0;
+int mydev_major = 88;
+int mydev_minor = 1;
 
 /* Use 'k' as magic number */
 #define DUMMY_MAGIC		'k'
